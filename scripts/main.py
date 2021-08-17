@@ -7,23 +7,27 @@ import math
 from geometry import get_angle, convert_frames_to_video
 
 print(cv2.__version__)
-video_name = "vid_left.mp4"
+video_name = "data/test_video_truck1.mp4"
 
 # Run calibration (Diamond Space - note used for this)
-# calib_video(video_name, debug=False, out_path='output_calib_vid')
+# calib_video(video_name, debug=False, out_path='output_calib_test_truck1')
 
-# Get 2 VPs from calibration file
+# Get VPs from calibration file
 # (refer notebook on ransac method for vanishing points)
-with open('correct_vp.txt', 'r+') as file:
+with open('data/correct_vp_truck', 'r+') as file:
     structure = json.load(file)
     camera_calibration = structure['camera_calibration']
 
 # Compute all Vps for test video
-from geometry import computeCameraCalibration
-vp1, vp2, vp3, pp , roadPlane, focal = computeCameraCalibration(camera_calibration["vp1"],
-                                                  camera_calibration["vp2"],
-                                                  camera_calibration["pp"])
+# from geometry import computeCameraCalibration
+# # vp1, vp2, vp3, pp , roadPlane, focal = computeCameraCalibration(camera_calibration["vp1"],
+#                                                   camera_calibration["vp2"],
+#                                                   camera_calibration["pp"])
 
+vp1 = camera_calibration["vp1"]
+vp2 = camera_calibration["vp2"]
+vp3 = camera_calibration["vp3"]
+pp = camera_calibration["pp"]
 
 # Read video and get count of total frames
 cap = cv2.VideoCapture(video_name)
@@ -31,8 +35,8 @@ total_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 
 # Show all VPs on videoframe
 # ret, frame = cap.read()
-# Save first frame
-# cv2.imwrite("first_vid_main.png", frame)
+# # Save first frame
+# cv2.imwrite("first_truck1_main.png", frame)
 # plt.plot([pp[0],vp1[0]], [pp[1],vp1[1]], 'r-', 6)
 # plt.plot([pp[0],vp2[0]],[pp[1], vp2[1]], 'g-', 6)
 # plt.plot([pp[0],vp3[0]], [pp[1],vp3[1]], 'b-', 6)
@@ -46,11 +50,11 @@ object_detector = cv2.createBackgroundSubtractorMOG2()
 frame_count = 0
 frame_array = []
 angles = []
-while(frame_count < total_frames-200):
+while(frame_count < total_frames-100):
     frame_count +=1
     ret, frame = cap.read()
     height, width,_ = frame.shape
-    # Background subtraction
+    #  Background subtraction
     mask = object_detector.apply(frame)
     _, mask = cv2.threshold(mask, 254, 255, cv2.THRESH_BINARY)
     # detect vehicles
@@ -59,13 +63,13 @@ while(frame_count < total_frames-200):
     for cnt in contours:
         # Calculate area of contour
         area = cv2.contourArea(cnt)
-        if area > 5000 and area < 8000:
+        if area > 20000 :
             # cv2.drawContours(frame, [cnt], -1, (0,255,0),2)
             x, y, w, h = cv2.boundingRect(cnt)
             cv2.rectangle(frame, (x,y),(x+w, y+h), (0,255,0),2)
             # detections.append([x, y, w, h])
             c = [x+w/2, y+h/2]
-            theta = str(round(get_angle(vp1[0:2], c[0:2] , vp2[0:2]),3))
+            theta = str(round(get_angle(vp1[0:2], c[0:2] , vp3[0:2]),3))
             angles.append(theta)
             text = "Angle = " + theta
             cv2.putText(frame, text, (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
@@ -84,10 +88,10 @@ while(frame_count < total_frames-200):
 print(len(frame_array))
 print(min(angles))
 print(max(angles))
-# json_structure = {'video': [str(video_name)], 'angles': angles}
-# with open('testvid_left.txt', 'w') as file:
-#     json.dump(json_structure, file)
-convert_frames_to_video(frame_array, 'sample.mp4')
+json_structure = {'video': [str(video_name)], 'angles': angles}
+with open('testvid_truck1', 'w') as file:
+    json.dump(json_structure, file)
+convert_frames_to_video(frame_array, 'results/sample_truck.mp4')
 cap.release()
 cv2.destroyAllWindows()
 
